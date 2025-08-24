@@ -12,6 +12,7 @@ import Projects from './components/Projects/Projects';
 import ProjectDetail from './components/Projects/ProjectDetail';
 import Convert from './components/Convert/Convert';
 import KeyLoc from './components/KeyLoc/KeyLoc';
+import SketchToCad from './components/SketchToCad/SketchToCad';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 const theme = createTheme({
@@ -112,6 +113,7 @@ const AppContent = () => {
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/convert" element={<Convert />} />
+          <Route path="/sketch-to-cad" element={<SketchToCad />} />
           <Route path="/keyloc" element={<KeyLoc />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

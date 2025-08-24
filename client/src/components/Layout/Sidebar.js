@@ -23,7 +23,8 @@ import {
   Person,
   Logout,
   Menu,
-  MenuOpen
+  MenuOpen,
+  AutoFixHigh
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -51,6 +52,12 @@ const Sidebar = ({ open, onToggle }) => {
       icon: <Transform />,
       path: '/convert',
       description: 'Merge & split PDF files'
+    },
+    {
+      text: 'Sketch to CAD',
+      icon: <AutoFixHigh />,
+      path: '/sketch-to-cad',
+      description: 'Convert sketches to CAD'
     },
     {
       text: 'Key&Loc',
