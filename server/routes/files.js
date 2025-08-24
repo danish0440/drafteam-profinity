@@ -7,7 +7,10 @@ const router = express.Router();
 // Configure multer for project file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const projectId = req.body.projectId || 'general';
+    const projectId = req.body.projectId;
+    if (!projectId) {
+      return cb(new Error('Project ID is required'), null);
+    }
     const uploadPath = path.join(__dirname, '../uploads/projects', projectId.toString());
     fs.ensureDirSync(uploadPath);
     cb(null, uploadPath);
