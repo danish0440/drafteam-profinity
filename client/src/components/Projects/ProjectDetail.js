@@ -456,14 +456,14 @@ const ProjectDetail = () => {
                         <ListItemText
                           primary={file.originalName}
                           secondary={
-                            <Box>
+                            <>
                               <Typography variant="caption" display="block">
                                 {formatFileSize(file.size)} • {file.type.toUpperCase()}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
                                 Uploaded: {new Date(file.created).toLocaleDateString()}
                               </Typography>
-                            </Box>
+                            </>
                           }
                         />
                         <ListItemSecondaryAction>
@@ -549,7 +549,7 @@ const ProjectDetail = () => {
                         <ListItemText
                           primary={activity.details}
                           secondary={
-                            <Box>
+                            <>
                               <Typography variant="caption" display="block">
                                 {activity.user} • {new Date(activity.timestamp).toLocaleString()}
                               </Typography>
@@ -558,7 +558,7 @@ const ProjectDetail = () => {
                                   {activity.fileInfo.name} ({activity.fileInfo.type})
                                 </Typography>
                               )}
-                            </Box>
+                            </>
                           }
                         />
                       </ListItem>

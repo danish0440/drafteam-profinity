@@ -7,10 +7,7 @@ const router = express.Router();
 // Configure multer for project file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const projectId = req.body.projectId;
-    if (!projectId) {
-      return cb(new Error('Project ID is required'), null);
-    }
+    const projectId = req.body.projectId || 'temp';
     const uploadPath = path.join(__dirname, '../uploads/projects', projectId.toString());
     fs.ensureDirSync(uploadPath);
     cb(null, uploadPath);
@@ -60,11 +57,20 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
     const uploadedFiles = [];
     
     for (const file of req.files) {
+      // Move file from temp to correct project folder if needed
+      let finalPath = file.path;
+      if (file.path.includes('temp')) {
+        const projectDir = path.join(__dirname, '../uploads/projects', projectId.toString());
+        fs.ensureDirSync(projectDir);
+        finalPath = path.join(projectDir, file.filename);
+        await fs.move(file.path, finalPath);
+      }
+      
       const fileInfo = {
         id: Date.now() + Math.random(),
         originalName: Buffer.from(file.originalname, 'latin1').toString('utf8'),
         filename: file.filename,
-        path: file.path,
+        path: finalPath,
         size: file.size,
         type: path.extname(file.originalname).toLowerCase(),
         uploadedBy: req.user.name,
