@@ -186,7 +186,8 @@ router.get('/download/:projectId/:filename', async (req, res) => {
 router.delete('/:projectId/:filename', async (req, res) => {
   try {
     const { projectId, filename } = req.params;
-    const filePath = path.join(__dirname, '../uploads/projects', projectId, filename);
+    const decodedFilename = decodeURIComponent(filename);
+    const filePath = path.join(__dirname, '../uploads/projects', projectId, decodedFilename);
     
     if (!await fs.pathExists(filePath)) {
       return res.status(404).json({ error: 'File not found' });
