@@ -154,8 +154,10 @@ const ProjectDetail = () => {
 
   const handleDownload = async (file) => {
     try {
+      // Properly encode the filename to handle special characters
+      const encodedFilename = encodeURIComponent(file.filename);
       const response = await axios.get(
-        `/api/files/download/${id}/${file.filename}`,
+        `/api/files/download/${id}/${encodedFilename}`,
         { responseType: 'blob' }
       );
       
@@ -179,7 +181,9 @@ const ProjectDetail = () => {
     if (!fileToDelete) return;
     
     try {
-      await axios.delete(`/api/files/${id}/${fileToDelete.filename}`);
+      // Properly encode the filename to handle special characters
+      const encodedFilename = encodeURIComponent(fileToDelete.filename);
+      await axios.delete(`/api/files/${id}/${encodedFilename}`);
       toast.success('File deleted successfully');
       fetchProjectData(); // Refresh file list
       setDeleteDialogOpen(false);

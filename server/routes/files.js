@@ -175,14 +175,24 @@ router.get('/project/:projectId', async (req, res) => {
 router.get('/download/:projectId/:filename', async (req, res) => {
   try {
     const { projectId, filename } = req.params;
-    const filePath = path.join(__dirname, '../uploads/projects', projectId, filename);
+    let decodedFilename;
+    
+    // Safely decode the filename, handle malformed URI components
+    try {
+      decodedFilename = decodeURIComponent(filename);
+    } catch (decodeError) {
+      console.warn('Failed to decode filename, using original:', filename);
+      decodedFilename = filename;
+    }
+    
+    const filePath = path.join(__dirname, '../uploads/projects', projectId, decodedFilename);
     
     if (!await fs.pathExists(filePath)) {
       return res.status(404).json({ error: 'File not found' });
     }
     
     // Extract original name for download
-    const originalName = filename.replace(/^\d+-\d+-/, '');
+    const originalName = decodedFilename.replace(/^\d+-\d+-/, '');
     
     res.download(filePath, originalName);
   } catch (error) {
@@ -195,7 +205,16 @@ router.get('/download/:projectId/:filename', async (req, res) => {
 router.delete('/:projectId/:filename', async (req, res) => {
   try {
     const { projectId, filename } = req.params;
-    const decodedFilename = decodeURIComponent(filename);
+    let decodedFilename;
+    
+    // Safely decode the filename, handle malformed URI components
+    try {
+      decodedFilename = decodeURIComponent(filename);
+    } catch (decodeError) {
+      console.warn('Failed to decode filename, using original:', filename);
+      decodedFilename = filename;
+    }
+    
     const filePath = path.join(__dirname, '../uploads/projects', projectId, decodedFilename);
     
     if (!await fs.pathExists(filePath)) {
@@ -223,14 +242,24 @@ router.delete('/:projectId/:filename', async (req, res) => {
 router.get('/info/:projectId/:filename', async (req, res) => {
   try {
     const { projectId, filename } = req.params;
-    const filePath = path.join(__dirname, '../uploads/projects', projectId, filename);
+    let decodedFilename;
+    
+    // Safely decode the filename, handle malformed URI components
+    try {
+      decodedFilename = decodeURIComponent(filename);
+    } catch (decodeError) {
+      console.warn('Failed to decode filename, using original:', filename);
+      decodedFilename = filename;
+    }
+    
+    const filePath = path.join(__dirname, '../uploads/projects', projectId, decodedFilename);
     
     if (!await fs.pathExists(filePath)) {
       return res.status(404).json({ error: 'File not found' });
     }
     
     const stats = await fs.stat(filePath);
-    const originalName = filename.replace(/^\d+-\d+-/, '');
+    const originalName = decodedFilename.replace(/^\d+-\d+-/, '');
     
     res.json({
       success: true,
