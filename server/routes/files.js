@@ -130,22 +130,31 @@ router.get('/project/:projectId', async (req, res) => {
     
     for (const filename of fileList) {
       const filePath = path.join(projectDir, filename);
-      const stats = await fs.stat(filePath);
       
-      if (stats.isFile()) {
-        // Extract original name from filename (remove timestamp prefix)
-        const originalName = filename.replace(/^\d+-\d+-/, '');
-        
-        files.push({
-          id: filename,
-          originalName,
-          filename,
-          size: stats.size,
-          type: path.extname(filename).toLowerCase(),
-          created: stats.birthtime,
-          modified: stats.mtime,
-          projectId: parseInt(projectId)
-        });
+      try {
+        // Double-check file exists and get stats
+        if (await fs.pathExists(filePath)) {
+          const stats = await fs.stat(filePath);
+          
+          if (stats.isFile()) {
+            // Extract original name from filename (remove timestamp prefix)
+            const originalName = filename.replace(/^\d+-\d+-/, '');
+            
+            files.push({
+              id: filename,
+              originalName,
+              filename,
+              size: stats.size,
+              type: path.extname(filename).toLowerCase(),
+              created: stats.birthtime,
+              modified: stats.mtime,
+              projectId: parseInt(projectId)
+            });
+          }
+        }
+      } catch (fileError) {
+        // Skip files that can't be accessed
+        console.warn(`Skipping inaccessible file: ${filename}`, fileError.message);
       }
     }
     
@@ -190,7 +199,12 @@ router.delete('/:projectId/:filename', async (req, res) => {
     const filePath = path.join(__dirname, '../uploads/projects', projectId, decodedFilename);
     
     if (!await fs.pathExists(filePath)) {
-      return res.status(404).json({ error: 'File not found' });
+      console.warn(`File not found for deletion: ${decodedFilename} in project ${projectId}`);
+      // Return success even if file doesn't exist (idempotent delete)
+      return res.json({
+        success: true,
+        message: 'File already removed or does not exist'
+      });
     }
     
     await fs.remove(filePath);
