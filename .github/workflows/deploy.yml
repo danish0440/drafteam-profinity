@@ -19,7 +19,11 @@ jobs:
           git fetch origin
           git reset --hard origin/production
           git pull origin production
-          cd client && npm install && npm run build
+          cd client
+          npm ci
+          npm run build
+          ls -la build/
+          npm cache clean --force
           cd ../server && npm install
           pip3 install -r ../requirements.txt
           pm2 restart drafteam-server
