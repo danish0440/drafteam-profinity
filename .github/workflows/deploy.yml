@@ -2,7 +2,7 @@ name: Deploy to VPS
 
 on:
   push:
-    branches: [ production ]
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -17,8 +17,8 @@ jobs:
         script: |
           cd /var/www/drafteam
           git fetch origin
-          git reset --hard origin/production
-          git pull origin production
+          git reset --hard origin/main
+          git pull origin main
           cd client
           npm ci
           npm run build
