@@ -16,8 +16,11 @@ jobs:
         key: ${{ secrets.VPS_SSH_KEY }}
         script: |
           cd /var/www/drafteam
+          git fetch origin
+          git reset --hard origin/production
           git pull origin production
           cd client && npm install && npm run build
           cd ../server && npm install
+          pip3 install -r ../requirements.txt
           pm2 restart drafteam-server
           echo "Deployment completed at $(date)"
