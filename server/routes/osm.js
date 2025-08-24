@@ -110,7 +110,7 @@ router.post('/convert', async (req, res) => {
     
     // Execute Python script
     const conversionPromise = new Promise((resolve, reject) => {
-      const pythonProcess = spawn('python', args, {
+      const pythonProcess = spawn('python3', args, {
         cwd: path.dirname(scriptPath)
       });
       
@@ -335,20 +335,25 @@ router.get('/check-script', async (req, res) => {
       });
     }
     
-    // Test Python availability
-    const testPromise = new Promise((resolve) => {
-      const pythonProcess = spawn('python', ['--version']);
-      
-      pythonProcess.on('close', (code) => {
-        resolve(code === 0);
+    // Test Python availability (try python3 first, then python)
+    const testPython = async (command) => {
+      return new Promise((resolve) => {
+        const pythonProcess = spawn(command, ['--version']);
+        
+        pythonProcess.on('close', (code) => {
+          resolve(code === 0);
+        });
+        
+        pythonProcess.on('error', () => {
+          resolve(false);
+        });
       });
-      
-      pythonProcess.on('error', () => {
-        resolve(false);
-      });
-    });
+    };
     
-    const pythonAvailable = await testPromise;
+    let pythonAvailable = await testPython('python3');
+    if (!pythonAvailable) {
+      pythonAvailable = await testPython('python');
+    }
     
     res.json({
       available: pythonAvailable,
