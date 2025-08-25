@@ -9,6 +9,7 @@ Version: 1.0.0
 
 import argparse
 import sys
+import json
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import logging
@@ -53,7 +54,8 @@ class OSMRelation:
 class LayerMapper:
     """Maps OSM tags to DXF layers with styling."""
     
-    def __init__(self, use_colors: bool = True):
+    def __init__(self, use_colors: bool = True, plan_type: str = 'key-plan'):
+        self.plan_type = plan_type
         self.layer_config = {
             'highway': {
                 'motorway': {'layer': 'HIGHWAY_MOTORWAY', 'color': colors.RED, 'lineweight': 100},
@@ -91,6 +93,14 @@ class LayerMapper:
         }
     
         self.use_colors = use_colors
+        
+        # Apply plan type filtering
+        if plan_type == 'key-plan':
+            # Remove footpaths for simplified view
+            if 'footway' in self.layer_config['highway']:
+                del self.layer_config['highway']['footway']
+            if 'path' in self.layer_config['highway']:
+                del self.layer_config['highway']['path']
     
     def get_layer_info(self, tags: Dict[str, str]) -> Dict[str, any]:
         """Get layer information based on OSM tags."""
@@ -99,73 +109,75 @@ class LayerMapper:
                 category = self.layer_config[key]
                 if value in category:
                     layer_info = category[value].copy()
-                    if not self.use_colors:
-                        layer_info['color'] = colors.WHITE
-                    return layer_info
-                elif 'default' in category:
-                    layer_info = category['default'].copy()
-                    if not self.use_colors:
-                        layer_info['color'] = colors.WHITE
-                    return layer_info
+                else:
+                    layer_info = category.get('default', {
+                        'layer': f'{key.upper()}_OTHER',
+                        'color': colors.WHITE,
+                        'lineweight': 10
+                    }).copy()
+                
+                # Apply color settings based on plan type
+                if not self.use_colors:
+                    layer_info['color'] = colors.WHITE
+                
+                return layer_info
         
-        # Default layer for unmatched features
-        default_color = colors.WHITE if self.use_colors else colors.WHITE
-        return {'layer': 'OSM_OTHER', 'color': default_color, 'lineweight': 10}
+        # Default layer for unrecognized tags
+        return {
+            'layer': 'MISC',
+            'color': colors.WHITE if not self.use_colors else colors.GRAY,
+            'lineweight': 5
+        }
 
 
 class CoordinateTransformer:
-    """Handles coordinate transformation from WGS84 to target projection."""
+    """Transforms coordinates from WGS84 to target CRS."""
     
     def __init__(self, target_crs: str = "EPSG:3857"):
-        """Initialize transformer. Default is Web Mercator."""
         self.transformer = Transformer.from_crs("EPSG:4326", target_crs, always_xy=True)
-        self.target_crs = target_crs
     
     def transform(self, lon: float, lat: float) -> Tuple[float, float]:
-        """Transform WGS84 coordinates to target projection."""
+        """Transform longitude, latitude to target CRS."""
         return self.transformer.transform(lon, lat)
 
 
 class OSMHandler(osmium.SimpleHandler):
-    """OSM data handler using osmium for efficient parsing."""
+    """Handles OSM data parsing."""
     
     def __init__(self):
-        osmium.SimpleHandler.__init__(self)
+        super().__init__()
         self.nodes = {}
         self.ways = []
         self.relations = []
-        self.bounds = None
     
     def node(self, n):
-        """Process OSM nodes."""
+        """Process OSM node."""
         tags = dict(n.tags) if n.tags else {}
-        node = OSMNode(n.id, n.location.lat, n.location.lon, tags)
-        self.nodes[n.id] = node
+        self.nodes[n.id] = OSMNode(n.id, n.location.lat, n.location.lon, tags)
     
     def way(self, w):
-        """Process OSM ways."""
+        """Process OSM way."""
         tags = dict(w.tags) if w.tags else {}
         nodes = [n.ref for n in w.nodes]
-        way = OSMWay(w.id, nodes, tags)
-        self.ways.append(way)
+        self.ways.append(OSMWay(w.id, nodes, tags))
     
     def relation(self, r):
-        """Process OSM relations."""
+        """Process OSM relation."""
         tags = dict(r.tags) if r.tags else {}
         members = [(m.type, m.ref, m.role) for m in r.members]
-        relation = OSMRelation(r.id, members, tags)
-        self.relations.append(relation)
+        self.relations.append(OSMRelation(r.id, members, tags))
 
 
 class DXFGenerator:
     """Generates DXF files from OSM data."""
     
-    def __init__(self, target_crs: str = "EPSG:3857", use_colors: bool = True):
+    def __init__(self, target_crs: str = "EPSG:3857", use_colors: bool = True, plan_type: str = 'key-plan'):
         self.doc = ezdxf.new('R2010')
         self.msp = self.doc.modelspace()
-        self.layer_mapper = LayerMapper(use_colors)
+        self.layer_mapper = LayerMapper(use_colors, plan_type)
         self.coord_transformer = CoordinateTransformer(target_crs)
         self.created_layers = set()
+        self.plan_type = plan_type
     
     def create_layer(self, layer_name: str, color: int, lineweight: int):
         """Create a DXF layer with specified properties."""
@@ -203,6 +215,10 @@ class DXFGenerator:
             if not way.tags:
                 continue
             
+            # Skip footpaths for key-plan
+            if self.plan_type == 'key-plan' and way.tags.get('highway') in ['footway', 'path']:
+                continue
+            
             # Get coordinates for way nodes
             coordinates = []
             for node_id in way.nodes:
@@ -238,7 +254,7 @@ class DXFGenerator:
     def save(self, output_path: str):
         """Save the DXF document."""
         self.doc.saveas(output_path)
-        logging.info(f"DXF file saved: {output_path}")
+        logging.info(f"DXF file saved to: {output_path}")
 
 
 def setup_logging(verbose: bool = False):
@@ -247,29 +263,21 @@ def setup_logging(verbose: bool = False):
     logging.basicConfig(
         level=level,
         format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        handlers=[logging.StreamHandler(sys.stdout)]
     )
 
 
 def main():
-    """Main function to run the OSM to DXF converter."""
-    parser = argparse.ArgumentParser(
-        description='Convert OpenStreetMap data to AutoCAD DXF format',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python osm_to_dxf.py map.osm
-  python osm_to_dxf.py map.osm --output map.dxf --projection EPSG:32633
-  python osm_to_dxf.py map.osm --verbose
-        """
-    )
-    
+    """Main conversion function."""
+    parser = argparse.ArgumentParser(description='Convert OSM data to DXF format')
     parser.add_argument('input_file', help='Input OSM file path')
-    parser.add_argument('-o', '--output', help='Output DXF file path (default: input_file.dxf)')
-    parser.add_argument('-p', '--projection', default='EPSG:3857', 
-                       help='Target coordinate system (default: EPSG:3857 - Web Mercator)')
-    parser.add_argument('--no-colors', action='store_true', help='Generate monochrome DXF (all layers in white)')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose logging')
+    parser.add_argument('-o', '--output', help='Output DXF file path')
+    parser.add_argument('--projection', default='EPSG:3857', help='Target projection (default: EPSG:3857)')
+    parser.add_argument('--plan-type', choices=['key-plan', 'location-plan'], default='key-plan',
+                       help='Plan type: key-plan (simplified) or location-plan (detailed)')
+    parser.add_argument('--no-colors', action='store_true', help='Disable colors (monochrome output)')
+    parser.add_argument('--verbose', action='store_true', help='Enable verbose logging')
+    parser.add_argument('--stats-output', help='Output file for conversion statistics (JSON)')
     
     args = parser.parse_args()
     
@@ -282,16 +290,20 @@ Examples:
         logging.error(f"Input file not found: {input_path}")
         sys.exit(1)
     
-    # Determine output file
+    # Determine output path
     if args.output:
-        output_path = args.output
+        output_path = Path(args.output)
     else:
         output_path = input_path.with_suffix('.dxf')
     
-    logging.info(f"Converting {input_path} to {output_path}")
-    logging.info(f"Target projection: {args.projection}")
-    
     try:
+        logging.info(f"Starting OSM to DXF conversion...")
+        logging.info(f"Input: {input_path}")
+        logging.info(f"Output: {output_path}")
+        logging.info(f"Plan type: {args.plan_type}")
+        logging.info(f"Projection: {args.projection}")
+        logging.info(f"Colors: {'disabled' if args.no_colors else 'enabled'}")
+        
         # Parse OSM data
         logging.info("Parsing OSM data...")
         handler = OSMHandler()
@@ -302,23 +314,39 @@ Examples:
         # Generate DXF
         logging.info("Generating DXF...")
         use_colors = not args.no_colors
-        dxf_gen = DXFGenerator(args.projection, use_colors)
+        dxf_gen = DXFGenerator(args.projection, use_colors, args.plan_type)
         
         # Process data
         dxf_gen.process_nodes(handler.nodes)
         dxf_gen.process_ways(handler.ways, handler.nodes)
         
         # Save DXF file
-        dxf_gen.save(output_path)
+        dxf_gen.save(str(output_path))
+        
+        # Generate statistics
+        stats = {
+            'nodes': len(handler.nodes),
+            'ways': len(handler.ways),
+            'relations': len(handler.relations),
+            'layers': len(dxf_gen.created_layers),
+            'file_size': output_path.stat().st_size,
+            'plan_type': args.plan_type,
+            'projection': args.projection,
+            'colors_enabled': use_colors
+        }
+        
+        # Output statistics
+        if args.stats_output:
+            with open(args.stats_output, 'w') as f:
+                json.dump(stats, f, indent=2)
+            logging.info(f"Statistics saved to: {args.stats_output}")
         
         logging.info("Conversion completed successfully!")
-        logging.info(f"Created {len(dxf_gen.created_layers)} layers")
+        logging.info(f"Created {stats['layers']} layers")
+        logging.info(f"Output file size: {stats['file_size']} bytes")
         
     except Exception as e:
         logging.error(f"Conversion failed: {e}")
-        if args.verbose:
-            import traceback
-            traceback.print_exc()
         sys.exit(1)
 
 

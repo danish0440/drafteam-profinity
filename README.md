@@ -18,11 +18,11 @@ A production-ready web application for managing workshop renovation projects wit
 - Track conversion history with user attribution
 
 ### 🗺️ Key&Loc (OSM to DXF)
-- Convert OpenStreetMap data to AutoCAD DXF format
-- Support for .osm, .osm.xml, and .pbf files
-- Multiple coordinate reference systems
-- Layer organization by feature type
-- Integration with existing Python conversion script
+- Redirects to professional OSM to DXF converter
+- Enhanced architecture-focused conversion tool
+- Real-time progress tracking and job management
+- Professional layer organization and plan types
+- Runs on separate application (http://localhost:5000)
 
 ### 👥 Team Authentication
 - Simple team-based login system
@@ -97,7 +97,7 @@ drafteam3/
 │   │   │   ├── Dashboard/  # Dashboard components
 │   │   │   ├── Projects/   # Project management
 │   │   │   ├── Convert/    # PDF conversion tools
-│   │   │   ├── KeyLoc/     # OSM to DXF converter
+│   │   │   ├── KeyLoc/     # OSM converter redirect
 │   │   │   └── Layout/     # Layout components
 │   │   ├── contexts/       # React contexts
 │   │   └── App.js         # Main app component
@@ -106,7 +106,7 @@ drafteam3/
 ├── server/                # Node.js backend
 │   ├── routes/            # API routes
 │   │   ├── convert.js     # PDF conversion APIs
-│   │   ├── osm.js         # OSM conversion APIs
+│   │   ├── (osm.js removed) # OSM now handled by external app
 │   │   └── files.js       # File management APIs
 │   ├── uploads/           # File storage
 │   │   ├── projects/      # Project files
@@ -114,8 +114,8 @@ drafteam3/
 │   │   └── temp/          # Temporary files
 │   ├── index.js           # Server entry point
 │   └── package.json       # Backend dependencies
-├── osm_to_dxf.py          # Python OSM converter
-├── requirements.txt       # Python dependencies
+├── (osm_to_dxf.py removed) # OSM conversion now external
+├── (requirements.txt removed) # Python deps now external
 └── package.json           # Root package.json
 ```
 

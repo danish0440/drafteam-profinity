@@ -11,10 +11,20 @@
     "start": "cd server && npm start",
     "install-all": "npm install && cd server && npm install && cd ../client && npm install"
   },
-  "keywords": ["drafting", "renovation", "workshop", "autocad", "sketchup", "pdf"],
+  "keywords": [
+    "drafting",
+    "renovation",
+    "workshop",
+    "autocad",
+    "sketchup",
+    "pdf"
+  ],
   "author": "DraftTeam",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "uuid": "^11.1.0"
   }
 }
